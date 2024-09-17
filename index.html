@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Flappy Bird 游戏</title>
     <style>
         body, html {
@@ -20,6 +20,8 @@
         }
         canvas {
             display: block;
+            width: 100%;
+            height: 100%;
         }
         .screen {
             position: absolute;
@@ -113,15 +115,25 @@
 
             this.highScore = localStorage.getItem('highScore') || 0;
 
+            // 键盘事件监听器
             document.addEventListener('keydown', (event) => {
                 if (event.code === 'Space' && this.isGameRunning) {
-                    this.birdVelocity = this.birdJump;
+                    this.flapBird();
                 }
             });
 
+            // 触摸事件监听器
+            this.canvas.addEventListener('touchstart', (event) => {
+                if (this.isGameRunning) {
+                    event.preventDefault(); // 防止默认的触摸行为
+                    this.flapBird();
+                }
+            });
+
+            // 鼠标点击事件监听器
             this.canvas.addEventListener('click', () => {
                 if (this.isGameRunning) {
-                    this.birdVelocity = this.birdJump;
+                    this.flapBird();
                 }
             });
 
@@ -196,6 +208,9 @@
             this.canvas.style.opacity = '1';
             this.isGameRunning = true;
 
+            // 添加这行来阻止默认的触摸行为（如滚动）
+            document.body.style.touchAction = 'none';
+
             switch(difficulty) {
                 case 'easy':
                     this.gameSpeed = 2 * this.scale;
@@ -225,6 +240,10 @@
             this.score = 0;
             this.passedPipe = false;
             this.topPipeHeight = Math.random() * (this.canvas.height - this.pipeGap);
+        },
+
+        flapBird() {
+            this.birdVelocity = this.birdJump;
         },
 
         gameLoop() {
@@ -331,6 +350,9 @@
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             this.fireworksCtx.clearRect(0, 0, this.fireworksCanvas.width, this.fireworksCanvas.height);
             
+            // 重置触摸行为
+            document.body.style.touchAction = '';
+
             this.showScreen(this.startScreen);
         },
 
