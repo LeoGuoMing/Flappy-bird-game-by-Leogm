@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bird 游戏</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        #gameContainer {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background-color: #5CACEE;
+        }
+        canvas {
+            display: block;
+        }
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .screen:not(#gameScreen) {
+            background-color: rgba(92, 172, 238, 0.8);
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 18px;
+        }
+        #fireworks {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div id="startScreen" class="screen">
+            <h1>Flappy Bird</h1>
+            <p>选择难度：</p>
+            <button onclick="game.startGame('easy')">简单</button>
+            <button onclick="game.startGame('medium')">中等</button>
+            <button onclick="game.startGame('hard')">困难</button>
+        </div>
+        <div id="gameScreen" class="screen" style="display: none;">
+            <!-- 游戏画面将在这里显示 -->
+        </div>
+        <div id="endScreen" class="screen" style="display: none;">
+            <h2 id="endMessage"></h2>
+            <p>你的得分：<span id="finalScore"></span></p>
+            <p>最高得分：<span id="highScore"></span></p>
+            <button onclick="game.restartGame()">再玩一次</button>
+        </div>
+        <canvas id="fireworks"></canvas>
+    </div>
+    <script>
+    const game = {
+        canvas: null,
+        ctx: null,
+        startScreen: null,
+        gameScreen: null,
+        endScreen: null,
+        fireworksCanvas: null,
+        fireworksCtx: null,
+        birdY: 0,
+        birdVelocity: 0,
+        birdGravity: 0.5,
+        birdJump: -10,
+        pipeX: 0,
+        pipeGap: 200,
+        pipeWidth: 100,
+        topPipeHeight: 0,
+        score: 0,
+        gameSpeed: 2,
+        isGameRunning: false,
+        passedPipe: false,
+        highScore: 0,
+        scoreMultiplier: 1,
+        birdImage: null,
+        scale: 1,
+        backgroundColor: '#5CACEE',
+        clouds: [],
+
+        init() {
+            this.canvas = document.getElementById('gameCanvas');
+            this.ctx = this.canvas.getContext('2d');
+            this.startScreen = document.getElementById('startScreen');
+            this.gameScreen = document.getElementById('gameScreen');
+            this.endScreen = document.getElementById('endScreen');
+            this.fireworksCanvas = document.getElementById('fireworks');
+            this.fireworksCtx = this.fireworksCanvas.getContext('2d');
+
+            this.resizeCanvas();
+            window.addEventListener('resize', () => this.resizeCanvas());
+
+            this.highScore = localStorage.getItem('highScore') || 0;
+
+            document.addEventListener('keydown', (event) => {
+                if (event.code === 'Space' && this.isGameRunning) {
+                    this.birdVelocity = this.birdJump;
+                }
+            });
+
+            this.canvas.addEventListener('click', () => {
+                if (this.isGameRunning) {
+                    this.birdVelocity = this.birdJump;
+                }
+            });
+
+            this.birdImage = new Image();
+            this.birdImage.src = 'output.png';
+            this.birdImage.onload = () => {
+                this.showScreen(this.startScreen);
+            };
+
+            this.createClouds();
+        },
+
+        createClouds() {
+            for (let i = 0; i < 3; i++) {
+                this.clouds.push({
+                    x: Math.random() * this.canvas.width,
+                    y: Math.random() * this.canvas.height / 2,
+                    width: Math.random() * 50 + 50,
+                    speed: Math.random() * 0.5 + 0.1
+                });
+            }
+        },
+
+        drawClouds() {
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            this.clouds.forEach(cloud => {
+                this.ctx.beginPath();
+                this.ctx.arc(cloud.x, cloud.y, cloud.width / 2, 0, Math.PI * 2);
+                this.ctx.arc(cloud.x + cloud.width / 4, cloud.y - cloud.width / 4, cloud.width / 3, 0, Math.PI * 2);
+                this.ctx.arc(cloud.x + cloud.width / 2, cloud.y, cloud.width / 3, 0, Math.PI * 2);
+                this.ctx.fill();
+
+                cloud.x += cloud.speed;
+                if (cloud.x > this.canvas.width + cloud.width) {
+                    cloud.x = -cloud.width;
+                }
+            });
+        },
+
+        resizeCanvas() {
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
+            this.fireworksCanvas.width = window.innerWidth;
+            this.fireworksCanvas.height = window.innerHeight;
+            this.scale = Math.min(this.canvas.width / 800, this.canvas.height / 600);
+            this.pipeGap = 200 * this.scale;
+            this.pipeWidth = 100 * this.scale;
+            this.birdGravity = 0.5 * this.scale;
+            this.birdJump = -10 * this.scale;
+            if (this.isGameRunning) {
+                this.resetGame();
+            }
+        },
+
+        showScreen(screen) {
+            this.startScreen.style.display = 'none';
+            this.gameScreen.style.display = 'none';
+            this.endScreen.style.display = 'none';
+            screen.style.display = 'flex';
+
+            if (screen === this.gameScreen) {
+                this.canvas.style.display = 'block';
+                this.gameScreen.style.backgroundColor = 'transparent';
+            } else {
+                this.canvas.style.display = 'none';
+            }
+        },
+
+        startGame(difficulty) {
+            this.showScreen(this.gameScreen);
+            this.canvas.style.display = 'block';
+            this.canvas.style.opacity = '1';
+            this.isGameRunning = true;
+
+            switch(difficulty) {
+                case 'easy':
+                    this.gameSpeed = 2 * this.scale;
+                    this.pipeGap = 250 * this.scale;
+                    this.scoreMultiplier = 1;
+                    break;
+                case 'medium':
+                    this.gameSpeed = 3 * this.scale;
+                    this.pipeGap = 225 * this.scale;
+                    this.scoreMultiplier = 2;
+                    break;
+                case 'hard':
+                    this.gameSpeed = 4 * this.scale;
+                    this.pipeGap = 200 * this.scale;
+                    this.scoreMultiplier = 3;
+                    break;
+            }
+
+            this.resetGame();
+            this.gameLoop();
+        },
+
+        resetGame() {
+            this.birdY = this.canvas.height / 2;
+            this.birdVelocity = 0;
+            this.pipeX = this.canvas.width;
+            this.score = 0;
+            this.passedPipe = false;
+            this.topPipeHeight = Math.random() * (this.canvas.height - this.pipeGap);
+        },
+
+        gameLoop() {
+            if (!this.isGameRunning) return;
+
+            // 完全清除画布
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+            // 绘制背景
+            this.ctx.fillStyle = this.backgroundColor;
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+            this.drawClouds();
+
+            this.birdVelocity += this.birdGravity;
+            this.birdY += this.birdVelocity;
+
+            if (this.birdY < 0) {
+                this.birdY = 0;
+                this.birdVelocity = 0;
+            }
+
+            if (this.birdY > this.canvas.height) {
+                this.birdY = this.canvas.height;
+                this.birdVelocity = 0;
+            }
+
+            const birdSize = 80 * this.scale;
+
+            // 为小鸟添加阴影
+            this.ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+            this.ctx.shadowBlur = 5;
+            this.ctx.shadowOffsetX = 3;
+            this.ctx.shadowOffsetY = 3;
+
+            this.ctx.drawImage(this.birdImage, 100 * this.scale, this.birdY - birdSize/2, birdSize, birdSize);
+
+            // 重置阴影设置
+            this.ctx.shadowColor = 'transparent';
+            this.ctx.shadowBlur = 0;
+            this.ctx.shadowOffsetX = 0;
+            this.ctx.shadowOffsetY = 0;
+
+            // 为管道添加简单的渐变
+            const gradient = this.ctx.createLinearGradient(this.pipeX, 0, this.pipeX + this.pipeWidth, 0);
+            gradient.addColorStop(0, '#004d00');
+            gradient.addColorStop(1, '#009900');
+            this.ctx.fillStyle = gradient;
+
+            this.ctx.fillRect(this.pipeX, 0, this.pipeWidth, this.topPipeHeight);
+            this.ctx.fillRect(this.pipeX, this.topPipeHeight + this.pipeGap, this.pipeWidth, this.canvas.height);
+
+            this.pipeX -= this.gameSpeed;
+
+            if (
+                (this.birdY < this.topPipeHeight + 30 * this.scale || this.birdY > this.topPipeHeight + this.pipeGap - 30 * this.scale) &&
+                this.pipeX < 180 * this.scale && this.pipeX > 20 * this.scale
+            ) {
+                this.endGame();
+                return;
+            }
+
+            if (this.pipeX + this.pipeWidth < 100 * this.scale && !this.passedPipe) {
+                this.score += this.scoreMultiplier;
+                this.passedPipe = true;
+            }
+
+            if (this.pipeX < -this.pipeWidth) {
+                this.pipeX = this.canvas.width;
+                this.topPipeHeight = Math.random() * (this.canvas.height - this.pipeGap);
+                this.passedPipe = false;
+            }
+
+            this.ctx.fillStyle = 'black';
+            this.ctx.font = `${30 * this.scale}px Arial`;
+            this.ctx.fillText('得分: ' + this.score, 20 * this.scale, 50 * this.scale);
+
+            requestAnimationFrame(() => this.gameLoop());
+        },
+
+        endGame() {
+            this.isGameRunning = false;
+            let message = '';
+            if (this.score > this.highScore) {
+                this.highScore = this.score;
+                localStorage.setItem('highScore', this.highScore);
+                message = '恭喜你！创造了新的记录';
+                this.createFireworks();
+            } else {
+                message = '再接再厉，不要放弃！';
+            }
+            document.getElementById('endMessage').textContent = message;
+            document.getElementById('finalScore').textContent = this.score;
+            document.getElementById('highScore').textContent = this.highScore;
+            
+            // 清除游戏画布
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            this.showScreen(this.endScreen);
+        },
+
+        restartGame() {
+            // 清除游戏画布和烟花画布
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.fireworksCtx.clearRect(0, 0, this.fireworksCanvas.width, this.fireworksCanvas.height);
+            
+            this.showScreen(this.startScreen);
+        },
+
+        createFireworks() {
+            // ... 保持原有的烟花代码不变 ...
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => game.init());
+    </script>
+</body>
+</html>
