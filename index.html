@@ -84,6 +84,10 @@
         <canvas id="fireworks"></canvas>
     </div>
     <script>
+    document.addEventListener('touchmove', function(e) {
+        e.preventDefault();
+    }, { passive: false });
+
     const game = {
         canvas: null,
         ctx: null,
@@ -110,7 +114,7 @@
         scale: 1,
         backgroundColor: '#5CACEE',
         clouds: [],
-        version: '1.0.0',
+        version: '1.0.1', // 更新这里的版本号
 
         init() {
             this.canvas = document.getElementById('gameCanvas');
@@ -137,6 +141,8 @@
             this.canvas.addEventListener('touchstart', this.handleTouch.bind(this), { passive: false });
             this.canvas.addEventListener('touchend', this.handleTouch.bind(this), { passive: false });
 
+            console.log('Touch event listeners added'); // 添加这行来确认监听器已添加
+
             // 鼠标点击事件监听器
             this.canvas.addEventListener('click', () => {
                 if (this.isGameRunning) {
@@ -157,11 +163,14 @@
         },
 
         handleTouch(event) {
-            console.log('Touch event triggered');
+            alert('Touch event triggered');
+            console.log('Touch event triggered, type:', event.type);
+            event.preventDefault();
             if (this.isGameRunning) {
-                event.preventDefault();
                 this.flapBird();
                 console.log('Bird flapped');
+            } else {
+                console.log('Game not running, touch ignored');
             }
         },
 
@@ -226,6 +235,7 @@
             this.canvas.style.display = 'block';
             this.canvas.style.opacity = '1';
             this.isGameRunning = true;
+            console.log('Game started, difficulty:', difficulty);
 
             // 添加这行来阻止默认的触摸行为（如滚动）
             document.body.style.touchAction = 'none';
@@ -264,10 +274,15 @@
 
         flapBird() {
             this.birdVelocity = this.birdJump;
+            console.log('Bird flapped, new velocity:', this.birdVelocity);
         },
 
         gameLoop() {
-            if (!this.isGameRunning) return;
+            console.log('Game loop running');
+            if (!this.isGameRunning) {
+                console.log('Game not running, loop stopped');
+                return;
+            }
 
             // 完全清除画布
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
