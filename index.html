@@ -54,6 +54,11 @@
             height: 100%;
             pointer-events: none;
         }
+        #versionInfo {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -65,6 +70,7 @@
             <button onclick="game.startGame('easy')">简单</button>
             <button onclick="game.startGame('medium')">中等</button>
             <button onclick="game.startGame('hard')">困难</button>
+            <p id="versionInfo"></p>
         </div>
         <div id="gameScreen" class="screen" style="display: none;">
             <!-- 游戏画面将在这里显示 -->
@@ -104,6 +110,7 @@
         scale: 1,
         backgroundColor: '#5CACEE',
         clouds: [],
+        version: '1.0.0',
 
         init() {
             this.canvas = document.getElementById('gameCanvas');
@@ -144,6 +151,9 @@
             };
 
             this.createClouds();
+
+            // 设置版本号
+            document.getElementById('versionInfo').textContent = 'Version: ' + this.version;
         },
 
         handleTouch(event) {
