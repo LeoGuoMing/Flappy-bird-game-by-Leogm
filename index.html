@@ -126,7 +126,7 @@
         scale: 1,
         backgroundColor: '#5CACEE',
         clouds: [],
-        version: '1.0.2', // 版本号,只在你手动更新代码时修改
+        version: '1.0.3', // 版本号,只在你手动更新代码时修改
 
         init() {
             this.canvas = document.getElementById('gameCanvas');
@@ -153,7 +153,7 @@
             document.addEventListener('touchstart', this.handleTouch.bind(this), { passive: false });
             document.addEventListener('touchend', this.handleTouch.bind(this), { passive: false });
 
-            alert('Touch event listeners added'); // 添加这行来确认监听器已添加
+            console.log('Touch event listeners added'); // 使用 console.log 替代 alert
 
             // 鼠标点击事件监听器
             this.canvas.addEventListener('click', () => {
@@ -175,14 +175,13 @@
         },
 
         handleTouch(event) {
-            alert('Touch event triggered');
-            console.log('Touch event triggered, type:', event.type);
-            event.preventDefault();
-            if (this.isGameRunning) {
+            if (this.isGameRunning && event.target === this.canvas) {
+                // 只有在游戏运行且触摸发生在画布上时才响应
+                event.preventDefault();
                 this.flapBird();
                 console.log('Bird flapped');
             } else {
-                console.log('Game not running, touch ignored');
+                console.log('Touch ignored: game not running or touch outside game area');
             }
         },
 
@@ -243,11 +242,10 @@
         },
 
         startGame(difficulty) {
+            this.isGameRunning = true; // 设置为 true 当游戏开始
             this.showScreen(this.gameScreen);
             this.canvas.style.display = 'block';
             this.canvas.style.opacity = '1';
-            this.isGameRunning = true;
-            alert('Game started, difficulty: ' + difficulty);
 
             // 添加这行来阻止默认的触摸行为（如滚动）
             document.body.style.touchAction = 'none';
@@ -273,6 +271,7 @@
 
             this.resetGame();
             this.gameLoop();
+            console.log('Game started, difficulty:', difficulty); // 使用 console.log 替代 alert
         },
 
         resetGame() {
@@ -286,13 +285,12 @@
 
         flapBird() {
             this.birdVelocity = this.birdJump;
-            alert('Bird flapped, new velocity: ' + this.birdVelocity);
+            console.log('Bird flapped, new velocity:', this.birdVelocity); // 使用 console.log 替代 alert
         },
 
         gameLoop() {
-            console.log('Game loop running');
             if (!this.isGameRunning) {
-                console.log('Game not running, loop stopped');
+                console.log('Game loop stopped');
                 return;
             }
 
@@ -372,7 +370,7 @@
         },
 
         endGame() {
-            this.isGameRunning = false;
+            this.isGameRunning = false; // 游戏结束时设置为 false
             let message = '';
             if (this.score > this.highScore) {
                 this.highScore = this.score;
@@ -393,6 +391,7 @@
         },
 
         restartGame() {
+            this.isGameRunning = false; // 重置游戏时确保为 false
             // 清除游戏画布和烟花画布
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             this.fireworksCtx.clearRect(0, 0, this.fireworksCanvas.width, this.fireworksCanvas.height);
