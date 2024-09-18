@@ -104,7 +104,6 @@
         scale: 1,
         backgroundColor: '#5CACEE',
         clouds: [],
-        isTouching: false,
 
         init() {
             this.canvas = document.getElementById('gameCanvas');
@@ -151,7 +150,7 @@
             console.log('Touch event triggered');
             if (this.isGameRunning) {
                 event.preventDefault();
-                this.isTouching = true;
+                this.flapBird();
                 console.log('Bird flapped');
             }
         },
@@ -268,11 +267,6 @@
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
             this.drawClouds();
-
-            if (this.isTouching) {
-                this.flapBird();
-                this.isTouching = false;
-            }
 
             this.birdVelocity += this.birdGravity;
             this.birdY += this.birdVelocity;
